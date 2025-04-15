@@ -1,0 +1,571 @@
+
+###SCRIPT PARA ANÁLISE QUALI-QUANTITATIVA DOS DADOS DO IASA COMPLETO - TESE MARAÍSA RESENDE BRAGA###
+
+library(openxlsx)
+#dir()
+##Versão sem as variáveis transversais Bioma, Perda de território e renda per capita
+
+##################Eixo 1#####################
+dados <- read.xlsx("SOBAL - Análise FAMD reduzida_2025.xlsx", sheet = "Acesso_recursos")
+
+names(dados)
+
+#Retirar variáveis 1 a 5
+#Vamos criar o objeto
+dadosFAMD = dados[,c(6:16)]
+names(dadosFAMD)
+summary(dadosFAMD)
+str(dadosFAMD)
+
+#transformando character em fator
+dadosFAMD[, c(1,2,3,4)] <- lapply(dadosFAMD[, c(1,2,3,4)], factor)
+summary(dadosFAMD)
+
+#Fazendo a imputação dos dados
+library(missMDA)
+nb_eixo1 = estim_ncpFAMD(dadosFAMD)#estimate n° of dimensions
+dadosFAMD_Eixo1 = imputeFAMD(dadosFAMD, ncp=nb_eixo1$ncp, scale=T)# Impute the table
+library(factoextra)
+library(FactoMineR)
+res.FAMD1 <- FAMD(dadosFAMD_Eixo1$completeObs, graph = FALSE)# do the PCA. Vamos fazer uma baseada em matriz de correlação pq as variaveis estao em escalas diferentes
+plot(res.FAMD1)
+res.FAMD1$eig
+fviz_screeplot(res.FAMD1)
+
+res.FAMD1$var$contrib #ver a contribução por variável e por componente
+                        Dim.1       Dim.2        Dim.3       Dim.4      Dim.5
+Water.access           0.03945788  0.04287424 18.605779375 38.67243855  1.1816356
+Family.land.area       7.54345013  1.29307955  2.312457304 20.56035989  0.8437002
+Land.access           14.51010980 14.67110332  3.620004313  1.18279753  2.9443387
+Access.nat.res.        0.01245659 27.59313263  4.214222736  3.38571153 11.4200941
+Autonomy.seeds         2.37176162 12.73516041 13.528204038  0.03321505  3.9142454
+Inputs.independ.      22.50441556  8.54895658  0.006167789 11.16727740  0.8047575
+Public.services        3.00277685  8.13153257 22.081625397  0.63653647 23.0806343
+Collective.land       25.84381691  0.16953882 12.509915823  0.51779819  3.7273981
+Natural.res..shared    0.28438929  4.15934354 16.453754198 11.75810852 40.8921624
+Garbage/sewage.treat. 21.42409862  2.14889305  3.879775598  0.02593672  1.6717818
+Access.soc..assist.    2.46326675 20.50638529  2.788093430 12.05982015  9.5192520
+
+
+var <- get_famd_var(res.FAMD1)
+var
+head(var$contrib, 19)
+
+# Plot of variables
+fviz_famd_var(res.FAMD1, repel = TRUE)
+# Contribution to the first dimension
+fviz_contrib(res.FAMD1, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(res.FAMD1, "var", axes = 2)
+
+#Quantitative variables
+quanti.var <- get_famd_var(res.FAMD1, "quanti.var")
+quanti.var 
+
+Quanti<-fviz_famd_var(res.FAMD1, "quanti.var", repel = TRUE, col.var = "contrib",
+                      gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+                      labelsize = 3)+labs(title="Quantitative variables")+ 
+                     theme(plot.title = element_text(hjust = .5, vjust=9),
+                    legend.text = element_text(size = 8),         # Tamanho do texto
+                    legend.title = element_text(size = 10),       # Tamanho do título da legenda
+                    legend.position = "right",                    # Posição da legenda
+                    legend.key.size = unit(0.5, "cm"))
+
+Quanti
+
+
+quali.var <- get_famd_var(res.FAMD1, "quali.var")
+quali.var 
+
+fviz_famd_var(res.FAMD1, "quali.var")
+Quali<-fviz_famd_var(res.FAMD, "quali.var", col.var = "contrib", 
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),labelsize = 3 ,
+                     alpha.var = 1, geom = c("point", "text"), shape.var = 15, 
+                     repel = T) +labs(title="Qualitative variable categories")+ 
+                    theme(plot.title = element_text(hjust = 0.5, vjust = 1),
+                        legend.text = element_text(size = 8),         # Tamanho do texto
+                        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+                        legend.position = "right",                    # Posição da legenda
+                        legend.key.size = unit(0.5, "cm"))+           #elementos gráficos
+                        theme(panel.grid.minor = element_blank())+ 
+                    scale_x_continuous(limits = c(-3, 3)) + 
+                    scale_y_continuous(limits = c(-2, 2))    
+
+Quali
+
+
+library(ggpubr)
+plots_quali_quanti_1<-ggarrange(Quanti, Quali, widths = c(1,1), ncol = 2, nrow = 1, labels = c("A","B"), label.y = 0.99, label.x = 0.01, font.label = list(size = 12, color = "gray20", face = "bold", family = NULL))
+
+plots_quali_quanti_1
+
+
+ggsave(plot=plots_quali_quanti_1, filename="Eixo1.jpg", units="cm", height=10.5, width=21, dpi=300)
+
+
+
+##################Eixo 2#####################
+dados2 <- read.xlsx("SOBAL - Análise FAMD reduzida_2025.xlsx", sheet = "Modelo_produção")
+
+names(dados2)
+#Vamos criar o objeto
+dadosFAMD2 = dados2[,c(5:20)]
+names(dadosFAMD2)
+summary(dadosFAMD2)
+
+names(dadosFAMD2)
+#transformando character em fator
+dadosFAMD2[, c(1:8)] <- lapply(dadosFAMD2[, c(1:8)], factor)
+summary(dadosFAMD2)
+
+#Fazendo a imputação dos dados
+library(missMDA)
+nb_eixo2 = estim_ncpFAMD(dadosFAMD2)#estimate n° of dimensions
+dadosFAMD2_Eixo2 = imputeFAMD(dadosFAMD2, ncp=nb_eixo2$ncp, scale=T)# Impute the table
+library(factoextra)
+library(FactoMineR)
+res.FAMD2 <- FAMD(dadosFAMD2_Eixo2$completeObs, graph = FALSE)# do the PCA. Vamos fazer uma baseada em matriz de correlação pq as variaveis estao em escalas diferentes
+plot(res.FAMD2)
+res.FAMD2$eig
+fviz_screeplot(res.FAMD2)
+
+res.FAMD2$var$contrib #ver a contribução por variável e por componente
+                            Dim.1      Dim.2      Dim.3       Dim.4      Dim.5
+Family.workers.inside     0.008350761 14.7703766  4.4379777  3.37325182  6.6010557
+Income.sources.(N)        0.111894785  0.6644869 23.1716829  0.13247746  5.9946073
+Crop.richness.(N)         7.419816636 16.9456349  1.6807693  4.10656694 13.0862450
+Agro-ecological.practic. 14.107120072  0.8614818  0.1340899  5.01237648  1.9947065
+Devices.access            0.021873268 16.3961760  1.3304118 16.28900969  1.5968732
+Soil.manegement           8.616187874  0.7513764 24.0270389  2.32844332  3.5469863
+Conserved.nat..areas      5.320696734  3.0472506  3.8351473 12.47955868  1.9969757
+Known.nat..foods.(N)      0.325435159 12.1397339  0.7588606 24.69429059  2.3889633
+Income.per.capita         0.960229929  7.5889797  0.6808203 20.74281732 10.1901542
+Increased.crop.rich.      9.649713721  2.3278661  5.7834518  0.02136556  0.5279675
+GMOs.crop.use             8.885897645  2.3570061  0.7798591  1.46395920 13.6483518
+Fertilize.use            10.601218918 10.5382423  1.8388468  3.63809385  2.6363318
+Pesticide.use            11.252576352  2.8923631  0.3840845  0.66141407  1.3131459
+Change.in.crops          12.081168148  3.6989682  4.6431842  3.45446854  3.1040578
+Youngsters.in.family      6.160311936  0.6903894 13.6301425  0.20074778 24.6530712
+External.workers.pres.    4.477508062  4.3296682 12.8836325  1.40115871  6.7205068
+
+# Contribution to the first dimension
+fviz_contrib(res.FAMD2, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(res.FAMD2, "var", axes = 2)
+
+#Quantitative variables
+quanti.var <- get_famd_var(res.FAMD2, "quanti.var")
+quanti.var 
+
+Quanti<-fviz_famd_var(res.FAMD2, "quanti.var", repel = TRUE, col.var = "contrib",
+                      gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+                      labelsize = 3)+labs(title="Quantitative variables")+ 
+  theme(plot.title = element_text(hjust = .5, vjust=9),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))
+
+Quanti
+
+
+quali.var <- get_famd_var(res.FAMD2, "quali.var")
+quali.var 
+
+fviz_famd_var(res.FAMD2, "quali.var")
+Quali<-fviz_famd_var(res.FAMD2, "quali.var", col.var = "contrib", 
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),labelsize = 3 ,
+                     alpha.var = 1, geom = c("point", "text"), shape.var = 15, 
+                     repel = T) +labs(title="Qualitative variable categories")+ 
+  theme(plot.title = element_text(hjust = 0.5, vjust = 1),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))+           #elementos gráficos
+  theme(panel.grid.minor = element_blank())+ 
+  scale_x_continuous(limits = c(-2, 2)) + 
+  scale_y_continuous(limits = c(-1, 1))    
+
+Quali
+
+
+library(ggpubr)
+plots_quali_quanti_1<-ggarrange(Quanti, Quali, widths = c(1,1), ncol = 2, nrow = 1, labels = c("A","B"), label.y = 0.99, label.x = 0.01, font.label = list(size = 12, color = "gray20", face = "bold", family = NULL))
+
+plots_quali_quanti_1
+
+
+ggsave(plot=plots_quali_quanti_1, filename="Eixo2.jpg", units="cm", height=10.5, width=21, dpi=300)
+
+
+
+
+
+##################Eixo 3#####################
+dados3 <- read.xlsx("SOBAL - Análise FAMD reduzida_2025.xlsx", sheet = "Benef_&_Comerc")
+
+names(dados3)
+#Vamos criar o objeto
+dadosFAMD3 = dados3[,c(5:14)]
+names(dadosFAMD3)
+summary(dadosFAMD3)
+
+names(dadosFAMD3)
+#transformando character em fator
+dadosFAMD3[, c(1:3)] <- lapply(dadosFAMD3[, c(1:3)], factor)
+summary(dadosFAMD3)
+
+#Fazendo a imputação dos dados
+library(missMDA)
+nb_eixo3 = estim_ncpFAMD(dadosFAMD3)#estimate n° of dimensions
+dadosFAMD_Eixo3 = imputeFAMD(dadosFAMD3, ncp=nb_eixo3$ncp, scale=T)# Impute the table
+library(factoextra)
+library(FactoMineR)
+res.FAMD3 <- FAMD(dadosFAMD_Eixo3$completeObs, graph = FALSE)# do the PCA. Vamos fazer uma baseada em matriz de correlação pq as variaveis estao em escalas diferentes
+plot(res.FAMD3)
+res.FAMD3$eig
+fviz_screeplot(res.FAMD3)
+
+res.FAMD3$var$contrib #ver a contribução por variável e por componente
+                        Dim.1       Dim.2        Dim.3      Dim.4       Dim.5
+Family.workers.inside   1.8739294 20.64413547 3.981786e-05 31.6909096  1.40475717
+Income.sources.(N)      2.6942899 12.04331023 1.127717e+00 40.7429147  0.04537493
+Benefited.items.(N)     0.2956297 35.88650807 1.109318e+00  0.7873190 12.01816073
+Sold.foods.(%)         24.6984171  0.16759054 8.092262e+00  0.4870288  3.62722132
+Sold.benefited.(N)     18.0089755  4.47399881 1.300965e+00  1.9308501 26.58943016
+Markets.for.trade.(N)  20.6268856  0.35759843 7.460677e+00  1.4970720  0.01041812
+Income.benef..(%)       6.4714649 18.43055618 2.058870e-01 11.3286835  0.07509504
+Income.per.capita       2.5064664  0.05439384 4.378197e+01  0.3731689 18.26428524
+Marketing.app.use      22.4887880  2.20970380 9.219283e+00  5.2034596  3.75077425
+Family.workers.outside  0.3351537  5.73220461 2.770188e+01  5.9585937 34.21448303
+
+
+
+# Contribution to the first dimension
+fviz_contrib(res.FAMD3, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(res.FAMD3, "var", axes = 2)
+
+
+#Quantitative variables
+quanti.var <- get_famd_var(res.FAMD3, "quanti.var")
+quanti.var 
+
+Quanti<-fviz_famd_var(res.FAMD3, "quanti.var", repel = TRUE, col.var = "contrib",
+                      gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+                      labelsize = 3)+labs(title="Quantitative variables")+ 
+  theme(plot.title = element_text(hjust = .5, vjust=9),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))
+
+Quanti
+
+
+quali.var <- get_famd_var(res.FAMD3, "quali.var")
+quali.var 
+
+fviz_famd_var(res.FAMD3, "quali.var")
+Quali<-fviz_famd_var(res.FAMD3, "quali.var", col.var = "contrib", 
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),labelsize = 3 ,
+                     alpha.var = 1, geom = c("point", "text"), shape.var = 15, 
+                     repel = T) +labs(title="Qualitative variable categories")+ 
+  theme(plot.title = element_text(hjust = 0.5, vjust = 1),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))+           #elementos gráficos
+  theme(panel.grid.minor = element_blank())+ 
+  scale_x_continuous(limits = c(-2, 2)) + 
+  scale_y_continuous(limits = c(-1, 1))    
+
+Quali
+
+
+library(ggpubr)
+plots_quali_quanti_1<-ggarrange(Quanti, Quali, widths = c(1,1), ncol = 2, nrow = 1, labels = c("A","B"), label.y = 0.99, label.x = 0.01, font.label = list(size = 12, color = "gray20", face = "bold", family = NULL))
+
+plots_quali_quanti_1
+
+
+ggsave(plot=plots_quali_quanti_1, filename="Eixo3.jpg", units="cm", height=10.5, width=21, dpi=300)
+
+
+
+
+
+##################Eixo 4#####################
+dados4 <- read.xlsx("SOBAL - Análise FAMD reduzida_2025.xlsx", sheet = "SAN")
+
+names(dados4)
+#Vamos criar o objeto
+dadosFAMD4 = dados4[,c(6:12)]
+names(dadosFAMD4)
+summary(dadosFAMD4)
+
+names(dadosFAMD4)
+#transformando character em fator
+dadosFAMD4[, c(1:3)] <- lapply(dadosFAMD4[, c(1:3)], factor)
+summary(dadosFAMD4)
+
+#Fazendo a imputação dos dados
+library(missMDA)
+nb_EIXO4 = estim_ncpFAMD(dadosFAMD4)#estimate n° of dimensions
+dadosFAMD_Eixo4  = imputeFAMD(dadosFAMD4, ncp=nb_EIXO4$ncp, scale=T)# Impute the table
+library(factoextra)
+library(FactoMineR)
+res.FAMD4 <- FAMD(dadosFAMD_Eixo4$completeObs, graph = FALSE)# do the PCA. Vamos fazer uma baseada em matriz de correlação pq as variaveis estao em escalas diferentes
+plot(res.FAMD4)
+res.FAMD4$eig
+fviz_screeplot(res.FAMD4)
+
+res.FAMD4$var$contrib #ver a contribução por variável e por componente
+                          Dim.1      Dim.2     Dim.3      Dim.4       Dim.5
+Food.prod..suffic.        12.9659842  0.1882013  8.732743 61.9671182  1.28157131
+Food.sourc..auton.        15.2038193 27.3986614  1.928111  1.4436219  6.79793473
+Resourc..stock            15.4191696  0.9988379 26.793440  0.3219794 53.99205139
+Known.nat..foods.(N)       8.2986967  2.9810263 47.002354  1.4938232 20.63325371
+Fresh.food.consump.       27.7248531  8.5737603  7.104045  0.5790980 14.34412956
+Ultra-process..food.cons.  0.2148147 53.8558633  3.261217  0.7578409  0.04898974
+Traditional.foods         20.1726623  6.0036495  5.178090 33.4365183  2.90206957
+
+
+
+# Contribution to the first dimension
+fviz_contrib(res.FAMD4, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(res.FAMD4, "var", axes = 2)
+
+
+#Quantitative variables
+quanti.var <- get_famd_var(res.FAMD4, "quanti.var")
+quanti.var 
+
+Quanti<-fviz_famd_var(res.FAMD4, "quanti.var", repel = TRUE, col.var = "contrib",
+                      gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+                      labelsize = 3)+labs(title="Quantitative variables")+ 
+  theme(plot.title = element_text(hjust = .5, vjust=9),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))
+
+Quanti
+
+
+quali.var <- get_famd_var(res.FAMD4, "quali.var")
+quali.var 
+
+fviz_famd_var(res.FAMD4, "quali.var")
+Quali<-fviz_famd_var(res.FAMD4, "quali.var", col.var = "contrib", 
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),labelsize = 3 ,
+                     alpha.var = 1, geom = c("point", "text"), shape.var = 15, 
+                     repel = T) +labs(title="Qualitative variable categories")+ 
+  theme(plot.title = element_text(hjust = 0.5, vjust = 1),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))+           #elementos gráficos
+  theme(panel.grid.minor = element_blank())+ 
+  scale_x_continuous(limits = c(-4, 2)) + 
+  scale_y_continuous(limits = c(-2, 2))    
+
+Quali
+
+
+library(ggpubr)
+plots_quali_quanti_1<-ggarrange(Quanti, Quali, widths = c(1,1), ncol = 2, nrow = 1, labels = c("A","B"), label.y = 0.99, label.x = 0.01, font.label = list(size = 12, color = "gray20", face = "bold", family = NULL))
+
+plots_quali_quanti_1
+
+
+ggsave(plot=plots_quali_quanti_1, filename="Eixo4.jpg", units="cm", height=10.5, width=21, dpi=300)
+
+
+
+
+
+##################Eixo 5#####################
+dados5 <- read.xlsx("SOBAL - Análise FAMD reduzida_2025.xlsx", sheet = "PP_&_governança")
+
+names(dados5)
+#Vamos criar o objeto
+dadosFAMD5 = dados5[,c(5:14)]
+names(dadosFAMD5)
+summary(dadosFAMD5)
+
+#transformando character em fator
+dadosFAMD5[, c(1:5)] <- lapply(dadosFAMD5[, c(1:5)], factor)
+summary(dadosFAMD5)
+
+#Fazendo a imputação dos dados
+library(missMDA)
+nb_eixo5 = estim_ncpFAMD(dadosFAMD5)#VEJA QUE DA ERRO MAS ELE SUGERE 3
+dadosFAMD_Eixo5 = imputeFAMD(dadosFAMD5, ncp=nb_eixo5$ncp, scale=T)
+library(factoextra)
+library(FactoMineR)
+res.FAMD5 <- FAMD(dadosFAMD_Eixo5$completeObs, graph = FALSE)# do the PCA. Vamos fazer uma baseada em matriz de correlação pq as variaveis estao em escalas diferentes
+plot(res.FAMD5)
+res.FAMD5$eig
+fviz_screeplot(res.FAMD5)
+
+res.FAMD5$var$contrib #ver a contribução por variável e por componente
+                          Dim.1     Dim.2     Dim.3      Dim.4        Dim.5
+Work.exchange           11.99779684 19.940932  2.115569 11.0670587  5.697314768
+Collective.work         17.91847927  4.606078  5.968686  0.9073706  7.380063516
+Satisf..with.comm..org.  9.06556639 33.472530  1.435097  0.1942960  4.968287151
+Self.determ..crops       2.57453292 13.501173 19.229764  0.5535225  2.620220189
+Territory.loss          32.55582472  7.336082  4.348131  1.9319605  0.001585386
+Public.polic..access     2.47137254  1.140900  5.210968 50.4210994  8.632410044
+Rural.tech..assist.      0.57864312  1.755003  1.914807  9.3979053 62.964979741
+Comm..org.               0.06929767  1.303340 27.920126  6.9870266  7.363214422
+Food.exch..and.don.      0.87361716  6.307363 25.997449  9.2291044  0.368436365
+Natural.res..shared     21.89486937 10.636599  5.859404  9.3106559  0.003488417
+
+
+# Contribution to the first dimension
+fviz_contrib(res.FAMD5, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(res.FAMD5, "var", axes = 2)
+
+
+
+#Quantitative variables
+quanti.var <- get_famd_var(res.FAMD5, "quanti.var")
+quanti.var 
+
+Quanti<-fviz_famd_var(res.FAMD5, "quanti.var", repel = TRUE, col.var = "contrib",
+                      gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+                      labelsize = 3)+labs(title="Quantitative variables")+ 
+  theme(plot.title = element_text(hjust = .5, vjust=9),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))
+
+Quanti
+
+
+quali.var <- get_famd_var(res.FAMD5, "quali.var")
+quali.var 
+
+fviz_famd_var(res.FAMD5, "quali.var")
+Quali<-fviz_famd_var(res.FAMD5, "quali.var", col.var = "contrib", 
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),labelsize = 3 ,
+                     alpha.var = 1, geom = c("point", "text"), shape.var = 15, 
+                     repel = T) +labs(title="Qualitative variable categories")+ 
+  theme(plot.title = element_text(hjust = 0.5, vjust = 1),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))+           #elementos gráficos
+  theme(panel.grid.minor = element_blank())+ 
+  scale_x_continuous(limits = c(-2, 2)) + 
+  scale_y_continuous(limits = c(-1, 1))    
+
+Quali
+
+
+library(ggpubr)
+plots_quali_quanti_1<-ggarrange(Quanti, Quali, widths = c(1,1), ncol = 2, nrow = 1, labels = c("A","B"), label.y = 0.99, label.x = 0.01, font.label = list(size = 12, color = "gray20", face = "bold", family = NULL))
+
+plots_quali_quanti_1
+
+
+ggsave(plot=plots_quali_quanti_1, filename="Eixo5.jpg", units="cm", height=10.5, width=21, dpi=300)
+
+
+
+
+##################Eixo 6#####################
+dados6<- read.xlsx("SOBAL - Análise FAMD reduzida_2025.xlsx", sheet = "Sociocultural_aspects2")
+
+names(dados6)
+#Vamos criar o objeto
+dadosFAMD6 = dados6[,c(6:15)]
+names(dadosFAMD6)
+summary(dadosFAMD6)
+
+names(dados)
+#transformando character em fator
+dadosFAMD6[, c(1:4)] <- lapply(dadosFAMD6[, c(1:4)], factor)
+summary(dadosFAMD6)
+
+#Fazendo a imputação dos dados
+library(missMDA)
+nb_eixo6 = estim_ncpFAMD(dadosFAMD6)#estimate n° of dimensions
+dadosFAMD_Eixo6 = imputeFAMD(dadosFAMD6, ncp=nb_eixo6$ncp, scale=T)# Impute the table
+library(factoextra)
+library(FactoMineR)
+res.FAMD6 <- FAMD(dadosFAMD_Eixo6$completeObs, graph = FALSE)# do the PCA.
+plot(res.FAMD6)
+res.FAMD6$eig
+fviz_screeplot(res.FAMD6)
+
+res.FAMD6$var$contrib #ver a contribução por variável e por componente
+                            Dim.1       Dim.2      Dim.3      Dim.4     Dim.5
+Gender.farmwork            0.7899613 11.44947907  4.1936760 28.1449415 18.491425
+Gender.housework          18.0968103  1.95070526 14.4674779  0.2080955 16.077800
+Gender.PP.&.tech..assist.  7.4809453  1.97820364 22.7883607  0.4874823  1.087313
+Gender.governance         12.0096724  9.82073107  3.3977276 20.4661033  3.405826
+Known.medic..plants.(N)   13.9061888 17.95660572  0.7610768 13.6474741  2.344213
+Known.nat..foods.(N)       7.1659563 31.89388278  5.7230055  0.0210945  2.877538
+Youth.rural.exodus        20.2606023  1.85280835  2.7402731  2.6913403  1.595648
+Family.rural.exodus       12.4512280  0.01982536  5.9357098 10.8331721 26.070436
+Blessing.practicies        5.5490503 22.18819745  5.9032459  5.5042605  1.814202
+Medicinal.plants.use       2.2895849  0.88956131 34.0894465 17.9960358 26.235599
+
+
+# Contribution to the first dimension
+fviz_contrib(res.FAMD6, "var", axes = 1)
+# Contribution to the second dimension
+fviz_contrib(res.FAMD6, "var", axes = 2)
+
+#Quantitative variables
+quanti.var <- get_famd_var(res.FAMD6, "quanti.var")
+quanti.var 
+
+Quanti<-fviz_famd_var(res.FAMD6, "quanti.var", repel = TRUE, col.var = "contrib",
+                      gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+                      labelsize = 3)+labs(title="Quantitative variables")+ 
+  theme(plot.title = element_text(hjust = .5, vjust=9),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))
+
+Quanti
+
+
+quali.var <- get_famd_var(res.FAMD6, "quali.var")
+quali.var 
+
+fviz_famd_var(res.FAMD6, "quali.var")
+Quali<-fviz_famd_var(res.FAMD6, "quali.var", col.var = "contrib", 
+                     gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),labelsize = 3 ,
+                     alpha.var = 1, geom = c("point", "text"), shape.var = 15, 
+                     repel = T) +labs(title="Qualitative variable categories")+ 
+  theme(plot.title = element_text(hjust = 0.5, vjust = 1),
+        legend.text = element_text(size = 8),         # Tamanho do texto
+        legend.title = element_text(size = 10),       # Tamanho do título da legenda
+        legend.position = "right",                    # Posição da legenda
+        legend.key.size = unit(0.5, "cm"))+           #elementos gráficos
+  theme(panel.grid.minor = element_blank())+ 
+  scale_x_continuous(limits = c(-2, 2)) + 
+  scale_y_continuous(limits = c(-1.5, 1.5))    
+
+Quali
+
+
+library(ggpubr)
+plots_quali_quanti_1<-ggarrange(Quanti, Quali, widths = c(1,1), ncol = 2, nrow = 1, labels = c("A","B"), label.y = 0.99, label.x = 0.01, font.label = list(size = 12, color = "gray20", face = "bold", family = NULL))
+
+plots_quali_quanti_1
+
+
+ggsave(plot=plots_quali_quanti_1, filename="Eixo6.jpg", units="cm", height=10.5, width=21, dpi=300)
+
+
+
+##SCRIPT DE JOÃO CUSTÓDIO E MARAÍSA RESENDE BRAGA
